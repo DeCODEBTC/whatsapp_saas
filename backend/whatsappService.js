@@ -46,6 +46,7 @@ export async function startWhatsAppClient() {
     }
 
     console.log('Iniciando Cliente WhatsApp-Web.js...');
+    sessionStatus = 'starting';
 
     client = new Client({
         authStrategy: new LocalAuth({

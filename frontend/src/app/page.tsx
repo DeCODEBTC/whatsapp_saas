@@ -41,7 +41,8 @@ export default function Home() {
   }, []);
 
   const handleConnectClick = async () => {
-    setIsLoading(true);
+    setStatus('starting');
+    setIsLoading(false);
     try {
       await fetch(`${API_URL}/api/whatsapp/start`, { method: 'POST' });
     } catch (e) {
@@ -131,6 +132,12 @@ export default function Home() {
                   Cancelar Conexão
                 </button>
               </div>
+            </div>
+          ) : status === 'starting' ? (
+            <div className="flex flex-col items-center text-emerald-600 dark:text-emerald-500 mt-4 bg-emerald-50 dark:bg-emerald-900/10 p-4 rounded-2xl border border-emerald-100 dark:border-emerald-900/30 w-full relative">
+              <Loader2 className="w-10 h-10 mb-2 animate-spin" />
+              <p className="font-semibold text-lg text-center">Iniciando Servidor...</p>
+              <p className="text-xs mt-1 text-emerald-600/80 mb-3 text-center">O WhatsApp leva alguns segundos para inicializar. Aguarde, não feche ou saia da aba.</p>
             </div>
           ) : (
             <div className="flex flex-col items-center mt-4 w-full">

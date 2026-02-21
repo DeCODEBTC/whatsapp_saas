@@ -21,7 +21,11 @@ export function getClient() {
 }
 
 export async function disconnectWhatsAppClient() {
-    if (!client) return { success: false, message: 'Nenhum cliente rodando' };
+    if (!client) {
+        sessionStatus = 'disconnected';
+        currentQR = null;
+        return { success: true, message: 'Nenhum cliente rodando, estado resetado.' };
+    }
 
     try {
         console.log('Solicitando logout do WhatsApp...');

@@ -52,7 +52,15 @@ export async function startWhatsAppClient() {
             dataPath: './whatsapp_sessions' // Pasta onde os cookies serão salvos no servidor
         }),
         puppeteer: {
-            args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-accelerated-2d-canvas',
+                '--no-first-run',
+                '--no-zygote',
+                '--disable-gpu'
+            ],
             headless: true
         }
     });
@@ -89,7 +97,11 @@ export async function startWhatsAppClient() {
         client = null;
     });
 
-    client.initialize();
+    client.initialize().catch(err => {
+        console.error('🚨 Erro Fatal ao iniciar o WhatsApp (Problema no Puppeteer / Chrome executável):', err);
+        sessionStatus = 'error_initializing';
+        client = null;
+    });
 }
 
 

@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { Smartphone, LogIn, Map, Send, Loader2, CheckCircle2 } from 'lucide-react';
+import { Smartphone, LogIn, Map, Send, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 
 export default function Home() {
   const [status, setStatus] = useState<string>('disconnected');
@@ -105,6 +105,18 @@ export default function Home() {
                 className="text-xs px-4 py-2 bg-red-50 text-red-600 hover:bg-red-100 dark:bg-red-950/30 dark:text-red-400 dark:hover:bg-red-900/50 rounded-lg transition-colors font-medium border border-red-200 dark:border-red-900/50"
               >
                 Desconectar WhatsApp
+              </button>
+            </div>
+          ) : status === 'error_initializing' ? (
+            <div className="flex flex-col items-center text-red-600 dark:text-red-500 mt-4 bg-red-50 dark:bg-red-900/10 p-4 rounded-2xl border border-red-100 dark:border-red-900/30 w-full relative">
+              <AlertCircle className="w-10 h-10 mb-2" />
+              <p className="font-semibold text-lg text-center">Falta a biblioteca do Chrome no Linux!</p>
+              <p className="text-xs mt-1 text-red-600/80 mb-3 text-center">O WhatsApp falhou ao abrir. Verifique o "Deploy Logs" do backend na Railway para os logs vermelhos do Puppeteer.</p>
+              <button
+                onClick={handleConnectClick}
+                className="text-xs px-4 py-2 bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 rounded-lg transition-colors font-medium border border-zinc-300 dark:border-zinc-700 mt-2"
+              >
+                Tentar Iniciar Novamente
               </button>
             </div>
           ) : status === 'qrcode' ? (

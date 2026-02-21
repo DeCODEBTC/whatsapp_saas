@@ -1,0 +1,9 @@
+Error [ERR_MODULE_NOT_FOUND]: Cannot find package 'express' imported from C:\Users\Gnar2\OneDrive\Área de Trabalho\Extract Google\whatsapp_saas\backend\index.js
+    at packageResolve (node:internal/modules/esm/resolve:853:9)
+    at moduleResolve (node:internal/modules/esm/resolve:910:20)
+    at defaultResolve (node:internal/modules/esm/resolve:1130:11)
+    at ModuleLoader.defaultResolve (node:internal/modules/esm/loader:396:12)
+    at ModuleLoader.resolve (node:internal/modules/esm/loader:365:25)
+    at ModuleLoader.getModuleJob (node:internal/modules/esm/loader:240:38)
+    at ModuleWrap.<anonymous> (node:internal/modules/esm/module_job:85:39)
+    at link (node:internal/modules/esm/module_job:84:36)

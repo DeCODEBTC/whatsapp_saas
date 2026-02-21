@@ -1,0 +1,783 @@
+﻿
+> frontend@0.1.0 build
+> next build
+
+npm : ⚠ Warning: 
+Next.js inferred your 
+workspace root, but it 
+may not be correct.
+No linha:1 caractere:1
++ npm run build 2>&1 | 
+Out-File -Encoding 
+utf8 build_error2.txt
++ ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo     
+         : NotSpecifi  
+  ed: (⚠ Warning: Ne   
+ xt...not be correc    
+t.:String) [], Rem    
+oteException
+    + FullyQualifiedEr 
+   rorId : NativeComm  
+  andError
+ 
+ We detected multiple 
+lockfiles and selected 
+the directory of C:\Use
+rs\Gnar2\package-lock.j
+son as the root 
+directory.
+ To silence this 
+warning, set 
+`turbopack.root` in 
+your Next.js config, 
+or consider removing 
+one of the lockfiles 
+if it's not needed.
+   See https://nextjs.o
+rg/docs/app/api-referen
+ce/config/next-config-j
+s/turbopack#root-direct
+ory for more 
+information.
+ Detected additional 
+lockfiles: 
+   * C:\Users\Gnar2\One
+Drive\Área de 
+Trabalho\Extract Google
+\whatsapp_saas\frontend
+\package-lock.json
+
+▲ Next.js 16.1.6 (Turbopack)
+- Environments: .env.local
+
+  Creating an optimized production build ...
+
+> Build error occurred
+Error: Turbopack build 
+failed with 5 errors:
+./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx:4:1
+Module not found: 
+Can't resolve 
+'lucide-react'
+[0m [90m 2 |[39m
+ [90m 3 |[39m 
+[36mimport[39m { 
+useState[33m,[39m 
+useRef[33m,[39m 
+useEffect } 
+[36mfrom[39m [32m're
+act'[39m[33m;[39m
+[31m[1m>[22m[39m[9
+0m 4 |[39m 
+[36mimport[39m { [33
+mDownload[39m[33m,[3
+9m [33mMap[39m[33m,
+[39m [33mPlay[39m[33
+m,[39m [33mLoader2[3
+9m[33m,[39m 
+[33mAlertCircle[39m 
+} [36mfrom[39m [32m'
+lucide-react'[39m[33m
+;[39m
+ [90m   |[39m [31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+[33m*[39m 
+[36mas[39m 
+[33mXLSX[39m 
+[36mfrom[39m [32m'xl
+sx'[39m[33m;[39m
+ [90m 6 |[39m
+ [90m 7 |[39m 
+[36mexport[39m 
+[36mdefault[39m 
+[36mfunction[39m [33
+mExtractorPage[39m() 
+{[0m
+
+
+
+Import traces:
+  Client Component 
+Browser:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Client Component 
+Browser]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Client Component 
+SSR]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Server Component]
+
+https://nextjs.org/docs
+/messages/module-not-fo
+und
+
+
+./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx:5:1
+Module not found: 
+Can't resolve 
+'lucide-react'
+[0m [90m 3 |[39m 
+[36mimport[39m { 
+useState[33m,[39m 
+useEffect } 
+[36mfrom[39m [32m're
+act'[39m[33m;[39m
+ [90m 4 |[39m 
+[36mimport[39m 
+[33mLink[39m 
+[36mfrom[39m [32m'ne
+xt/link'[39m[33m;[39
+m
+[31m[1m>[22m[39m[9
+0m 5 |[39m 
+[36mimport[39m { [33
+mSmartphone[39m[33m,
+[39m [33mLogIn[39m[3
+3m,[39m [33mMap[39m
+[33m,[39m [33mSend[3
+9m[33m,[39m [33mLoad
+er2[39m[33m,[39m 
+[33mCheckCircle2[39m 
+} [36mfrom[39m [32m'
+lucide-react'[39m[33m
+;[39m
+ [90m   |[39m [31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m
+ [90m 6 |[39m
+ [90m 7 |[39m 
+[36mexport[39m 
+[36mdefault[39m 
+[36mfunction[39m 
+[33mHome[39m() {
+ [90m 8 |[39m   
+[36mconst[39m 
+[status[33m,[39m 
+setStatus] [33m=[39m 
+useState[33m<[39m[33
+mstring[39m[33m>[39m
+([32m'disconnected'[3
+9m)[33m;[39m[0m
+
+
+
+Import traces:
+  Client Component 
+Browser:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx 
+[Client Component 
+Browser]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx 
+[Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx 
+[Client Component SSR]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx 
+[Server Component]
+
+https://nextjs.org/docs
+/messages/module-not-fo
+und
+
+
+./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x:4:1
+Module not found: 
+Can't resolve 
+'lucide-react'
+[0m [90m 2 |[39m
+ [90m 3 |[39m 
+[36mimport[39m { 
+useState[33m,[39m 
+useRef } 
+[36mfrom[39m [32m're
+act'[39m[33m;[39m
+[31m[1m>[22m[39m[9
+0m 4 |[39m 
+[36mimport[39m { [33
+mUpload[39m[33m,[39m
+ [33mSend[39m[33m,[
+39m [33mFileSpreadshee
+t[39m[33m,[39m [33m
+AlertCircle[39m[33m,
+[39m [33mCheckCircle2
+[39m[33m,[39m [33mCh
+evronRight[39m[33m,[
+39m [33mXIcon[39m } 
+[36mfrom[39m [32m'lu
+cide-react'[39m[33m;
+[39m
+ [90m   |[39m [31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m
+ [90m 5 |[39m 
+[36mimport[39m 
+[33m*[39m 
+[36mas[39m 
+[33mXLSX[39m 
+[36mfrom[39m [32m'xl
+sx'[39m[33m;[39m
+ [90m 6 |[39m
+ [90m 7 |[39m type 
+[33mContact[39m 
+[33m=[39m {[0m
+
+
+
+Import traces:
+  Client Component 
+Browser:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Client Component 
+Browser]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Client Component 
+SSR]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Server Component]
+
+https://nextjs.org/docs
+/messages/module-not-fo
+und
+
+
+./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx:5:1
+Module not found: 
+Can't resolve 'xlsx'
+[0m [90m 3 |[39m 
+[36mimport[39m { 
+useState[33m,[39m 
+useRef[33m,[39m 
+useEffect } 
+[36mfrom[39m [32m're
+act'[39m[33m;[39m
+ [90m 4 |[39m 
+[36mimport[39m { [33
+mDownload[39m[33m,[3
+9m [33mMap[39m[33m,
+[39m [33mPlay[39m[33
+m,[39m [33mLoader2[3
+9m[33m,[39m 
+[33mAlertCircle[39m 
+} [36mfrom[39m [32m'
+lucide-react'[39m[33m
+;[39m
+[31m[1m>[22m[39m[9
+0m 5 |[39m 
+[36mimport[39m 
+[33m*[39m 
+[36mas[39m 
+[33mXLSX[39m 
+[36mfrom[39m [32m'xl
+sx'[39m[33m;[39m
+ [90m   |[39m [31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+ [90m 6 |[39m
+ [90m 7 |[39m 
+[36mexport[39m 
+[36mdefault[39m 
+[36mfunction[39m [33
+mExtractorPage[39m() {
+ [90m 8 |[39m     
+[36mconst[39m 
+[url[33m,[39m 
+setUrl] [33m=[39m use
+State([32m''[39m)[33
+m;[39m[0m
+
+
+
+Import traces:
+  Client Component 
+Browser:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Client Component 
+Browser]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Client Component 
+SSR]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx [Server Component]
+
+https://nextjs.org/docs
+/messages/module-not-fo
+und
+
+
+./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x:5:1
+Module not found: 
+Can't resolve 'xlsx'
+[0m [90m 3 |[39m 
+[36mimport[39m { 
+useState[33m,[39m 
+useRef } 
+[36mfrom[39m [32m're
+act'[39m[33m;[39m
+ [90m 4 |[39m 
+[36mimport[39m { [33
+mUpload[39m[33m,[39m
+ [33mSend[39m[33m,[
+39m [33mFileSpreadshee
+t[39m[33m,[39m [33m
+AlertCircle[39m[33m,
+[39m [33mCheckCircle2
+[39m[33m,[39m [33mCh
+evronRight[39m[33m,[
+39m [33mXIcon[39m } 
+[36mfrom[39m [32m'lu
+cide-react'[39m[33m;
+[39m
+[31m[1m>[22m[39m[9
+0m 5 |[39m 
+[36mimport[39m 
+[33m*[39m 
+[36mas[39m 
+[33mXLSX[39m 
+[36mfrom[39m [32m'xl
+sx'[39m[33m;[39m
+ [90m   |[39m [31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m[
+31m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1
+m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[22
+m[39m[31m[1m^[22m[
+39m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[3
+1m[1m^[22m[39m[31m
+[1m^[22m[39m[31m[1m
+^[22m[39m[31m[1m^[
+22m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[3
+9m[31m[1m^[22m[39m
+[31m[1m^[22m[39m[31
+m[1m^[22m[39m[31m[
+1m^[22m[39m[31m[1m^
+[22m[39m[31m[1m^[2
+2m[39m[31m[1m^[22m
+[39m[31m[1m^[22m[39
+m[31m[1m^[22m[39m
+ [90m 6 |[39m
+ [90m 7 |[39m type 
+[33mContact[39m 
+[33m=[39m {
+ [90m 8 |[39m     
+nome[33m:[39m 
+string[33m;[39m[0m
+
+
+
+Import traces:
+  Client Component 
+Browser:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Client Component 
+Browser]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Server Component]
+
+  Client Component SSR:
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Client Component 
+SSR]
+    ./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x [Server Component]
+
+https://nextjs.org/docs
+/messages/module-not-fo
+und
+
+
+    at <unknown> 
+(./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx:4:1)
+    at <unknown> (https
+://nextjs.org/docs/mess
+ages/module-not-found)
+    at <unknown> 
+(./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/page.tsx:5:1)
+    at <unknown> (https
+://nextjs.org/docs/mess
+ages/module-not-found)
+    at <unknown> 
+(./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x:4:1)
+    at <unknown> (https
+://nextjs.org/docs/mess
+ages/module-not-found)
+    at <unknown> 
+(./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/extractor/page
+.tsx:5:1)
+    at <unknown> (https
+://nextjs.org/docs/mess
+ages/module-not-found)
+    at <unknown> 
+(./OneDrive/Área de 
+Trabalho/Extract Google
+/whatsapp_saas/frontend
+/src/app/sender/page.ts
+x:5:1)
+    at <unknown> (https
+://nextjs.org/docs/mess
+ages/module-not-found)

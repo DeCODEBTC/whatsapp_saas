@@ -122,9 +122,18 @@ export default function Home() {
             </div>
           ) : status === 'qrcode' ? (
             <div className="flex flex-col items-center text-orange-600 mt-4 w-full">
-              <div className="bg-orange-50 border border-orange-200 p-4 rounded-xl w-full flex flex-col items-center">
-                <p className="font-semibold text-sm">Escaneie o QR Code</p>
-                <p className="text-xs text-orange-700/80 mt-1 mb-3 text-center">Abra o terminal do Backend (porta 3001) para ler o QR com celular.</p>
+              <div className="bg-orange-50 border border-orange-200 p-6 rounded-xl w-full flex flex-col items-center">
+                <p className="font-semibold text-lg text-orange-600 mb-2">Escaneie o QR Code</p>
+                {qrBase64 ? (
+                  <div className="bg-white p-4 rounded-xl shadow-sm mb-4 border border-orange-200/60">
+                    <img src={qrBase64} alt="WhatsApp QR Code" className="w-48 h-48 object-contain" />
+                  </div>
+                ) : (
+                  <div className="w-48 h-48 flex items-center justify-center bg-orange-100/50 rounded-xl mb-4">
+                    <Loader2 className="w-8 h-8 animate-spin text-orange-400" />
+                  </div>
+                )}
+                <p className="text-xs text-orange-700/80 mb-3 text-center">Aponte a câmera do seu WhatsApp para se conectar à automação.</p>
                 <button
                   onClick={handleDisconnectClick}
                   className="text-xs px-4 py-2 bg-zinc-200 text-zinc-700 hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700 rounded-lg transition-colors font-medium mt-2"

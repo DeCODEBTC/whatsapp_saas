@@ -2,7 +2,7 @@ import pkg from 'whatsapp-web.js';
 const { Client, LocalAuth } = pkg;
 // Em Node.js commonjs importamos via require, mas como estamos em ES Modules, precisamos dessa sintaxe 
 // ou renomear o package 'whatsapp-web.js' no import dependendo da lib, usamos pkg destructing.
-import qrcode from 'qrcode-terminal';
+import qrcode from 'qrcode';
 
 let client = null;
 let sessionStatus = 'disconnected'; // 'disconnected' | 'qrcode' | 'connected'
@@ -68,11 +68,15 @@ export async function startWhatsAppClient() {
 
     client.on('qr', async (qr) => {
         // Generate and scan this code with your phone
-        console.log('QR RECEIVED', qr);
+        console.log('QR RECEIVED (Gerando Base64)');
         sessionStatus = 'qrcode';
-        currentQR = qr;
-
-        qrcode.generate(qr, { small: true });
+        try {
+            const qrBase64 = await qrcode.toDataURL(qr);
+            currentQR = qrBase64;
+        } catch (err) {
+            console.error('Erro ao gerar imagem QR', err);
+            currentQR = qr; // Fallback
+        }
     });
 
     client.on('ready', async () => {

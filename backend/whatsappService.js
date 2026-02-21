@@ -3,7 +3,6 @@ const { Client, LocalAuth } = pkg;
 // Em Node.js commonjs importamos via require, mas como estamos em ES Modules, precisamos dessa sintaxe 
 // ou renomear o package 'whatsapp-web.js' no import dependendo da lib, usamos pkg destructing.
 import qrcode from 'qrcode-terminal';
-import { supabase } from './supabaseClient.js';
 
 let client = null;
 let sessionStatus = 'disconnected'; // 'disconnected' | 'qrcode' | 'connected'
@@ -36,7 +35,6 @@ export async function disconnectWhatsAppClient() {
         client = null;
         sessionStatus = 'disconnected';
         currentQR = null;
-        await updateDbSessionStatus('disconnected');
     }
     return { success: true };
 }
@@ -65,8 +63,6 @@ export async function startWhatsAppClient() {
         sessionStatus = 'qrcode';
         currentQR = qr;
 
-        // Atualiza o BD para o frontend saber
-        await updateDbSessionStatus('qrcode');
         qrcode.generate(qr, { small: true });
     });
 
@@ -74,7 +70,6 @@ export async function startWhatsAppClient() {
         console.log('Cliente WhatsApp está PRONTO!');
         sessionStatus = 'connected';
         currentQR = null;
-        await updateDbSessionStatus('connected');
     });
 
     client.on('authenticated', () => {
@@ -84,14 +79,12 @@ export async function startWhatsAppClient() {
     client.on('auth_failure', async msg => {
         console.error('Falha na autenticação', msg);
         sessionStatus = 'disconnected';
-        await updateDbSessionStatus('disconnected');
     });
 
     client.on('disconnected', async (reason) => {
         console.log('Cliente WhatsApp Desconectado', reason);
         sessionStatus = 'disconnected';
         currentQR = null;
-        await updateDbSessionStatus('disconnected');
         client.destroy();
         client = null;
     });
@@ -99,22 +92,4 @@ export async function startWhatsAppClient() {
     client.initialize();
 }
 
-async function updateDbSessionStatus(status) {
-    const sessionName = 'default';
 
-    // Tenta checar se já existe e atualizar, senão cria
-    const { data, error } = await supabase
-        .from('whatsapp_sessions')
-        .select('id')
-        .eq('session_name', sessionName)
-        .single();
-
-    if (data) {
-        await supabase.from('whatsapp_sessions')
-            .update({ status: status })
-            .eq('id', data.id);
-    } else {
-        await supabase.from('whatsapp_sessions')
-            .insert([{ session_name: sessionName, status: status }]);
-    }
-}

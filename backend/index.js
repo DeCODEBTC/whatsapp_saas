@@ -2,7 +2,6 @@ import express from 'express';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import { startWhatsAppClient, disconnectWhatsAppClient, getSessionStatus, getQRCode, getClient } from './whatsappService.js';
-import { startCampaignLoop } from './campaignService.js';
 import { extractFromMaps } from './mapsService.js';
 
 dotenv.config();
@@ -137,7 +136,4 @@ app.listen(PORT, () => {
 
     // Opcional: já tentar iniciar o cliente WhatsApp na memoria ao ligar o servdor
     startWhatsAppClient();
-
-    // Inicia o "Worker" que ficará checando as campanhas
-    startCampaignLoop();
 });

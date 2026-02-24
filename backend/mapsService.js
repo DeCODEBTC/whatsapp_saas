@@ -13,7 +13,14 @@ export async function extractFromMaps(url, onProgress) {
         onProgress('Iniciando navegador com múltiplos workers...', 0);
         browser = await chromium.launch({
             headless: true,
-            args: ['--no-sandbox', '--disable-setuid-sandbox']
+            args: [
+                '--no-sandbox',
+                '--disable-setuid-sandbox',
+                '--disable-dev-shm-usage',
+                '--disable-gpu',
+                '--no-zygote',
+                '--single-process'
+            ]
         });
 
         // Context com User-Agent e Locale para parecer mais "humano"
@@ -84,18 +91,18 @@ export async function extractFromMaps(url, onProgress) {
             }
         }
 
-        onProgress(`${uniquePlaces.length} locais encontrados. Iniciando extração com 5 workers paralelos...`, uniquePlaces.length);
+        onProgress(`${uniquePlaces.length} locais encontrados. Iniciando extração com 3 workers paralelos...`, uniquePlaces.length);
 
         // Fecha página principal pra economizar RAM
         await mainPage.close();
 
         // --- FASE 2: Workers Paralelos ---
-        const CONCURRENCY = 5;
+        const CONCURRENCY = 3; // Reduzido para economizar RAM no Railway
         let completedCount = 0;
         let finalData = [];
         const queue = [...uniquePlaces];
 
-        const workerFn = async () => {
+        const workerFn = async (workerId) => {
             const page = await context.newPage();
             // Bloqueia imagens/media para performance
             await page.route('**/*', (route) => {
@@ -109,6 +116,7 @@ export async function extractFromMaps(url, onProgress) {
 
             while (queue.length > 0) {
                 const place = queue.shift();
+                console.log(`[Worker ${workerId}] Extraindo: ${place.name}`);
                 let phone = null;
                 let retries = 2; // Tentativas se a página falhar ao carregar
 
@@ -156,7 +164,7 @@ export async function extractFromMaps(url, onProgress) {
                         });
                         break; // Se chegou aqui, deu certo (mesmo se phone for null)
                     } catch (e) {
-                        console.error(`Tentativa falhou para ${place.name}: ${e.message}`);
+                        console.error(`[Worker ${workerId}] Tentativa falhou para ${place.name}: ${e.message}`);
                         retries--;
                         if (retries >= 0) await page.waitForTimeout(2000);
                     }
@@ -176,7 +184,7 @@ export async function extractFromMaps(url, onProgress) {
 
         const workers = [];
         for (let i = 0; i < CONCURRENCY; i++) {
-            workers.push(workerFn());
+            workers.push(workerFn(i + 1));
         }
 
         await Promise.all(workers);

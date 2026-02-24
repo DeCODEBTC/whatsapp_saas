@@ -70,14 +70,21 @@ app.get('/api/extract', async (req, res) => {
         res.write(`data: ${JSON.stringify(data)}\n\n`);
     };
 
+    // Heartbeat para evitar timeout em proxies/railway
+    const heartbeat = setInterval(() => {
+        res.write(': heartbeat\n\n');
+    }, 15000);
+
     try {
         const results = await extractFromMaps(url, (message, count) => {
             sendEvent('progress', { message, count });
         });
 
+        clearInterval(heartbeat);
         sendEvent('result', results);
         res.end(); // Encerra a conexão SSE
     } catch (error) {
+        clearInterval(heartbeat);
         console.error('Erro na extração:', error);
         sendEvent('error', { error: 'Ocorreu um erro durante a extração.' });
         res.end();

@@ -11,21 +11,29 @@ export async function extractFromMaps(url, onProgress) {
     let browser;
     try {
         onProgress('Iniciando navegador com múltiplos workers...', 0);
-        browser = await chromium.launch({ headless: true });
+        browser = await chromium.launch({
+            headless: true,
+            args: ['--no-sandbox', '--disable-setuid-sandbox']
+        });
 
-        // Criar um contexto que todos os workers vão compartilhar (menos consumo de ram)
-        const context = await browser.newContext();
+        // Context com User-Agent e Locale para parecer mais "humano"
+        const context = await browser.newContext({
+            userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
+            locale: 'pt-BR',
+            viewport: { width: 1280, height: 720 }
+        });
+
         const mainPage = await context.newPage();
 
         onProgress('Acessando o Google Maps...', 0);
-        await mainPage.goto(url, { waitUntil: 'load', timeout: 60000 });
+        await mainPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
         // Espera a barra lateral carregar
         const feedSelector = '.m6QErb[aria-label]';
         try {
-            await mainPage.waitForSelector(feedSelector, { timeout: 15000 });
+            await mainPage.waitForSelector(feedSelector, { timeout: 20000 });
         } catch (e) {
-            onProgress('Aviso: Não encontrei a lista de resultados. Talvez o link não seja de uma pesquisa.', 0);
+            onProgress('Aviso: Não encontrei a lista de resultados. Verifique se o link está correto.', 0);
         }
 
         let previousHeight = 0;
@@ -52,7 +60,7 @@ export async function extractFromMaps(url, onProgress) {
                 sameHeightCount = 0;
             }
             previousHeight = scrollStatus.height;
-            await mainPage.waitForTimeout(1500); // Pausa otimizada
+            await mainPage.waitForTimeout(2000); // Pausa um pouco maior para carregar conteúdo
 
             const count = await mainPage.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
             onProgress(`Rolando a página... (${count} locais visíveis)`, count);
@@ -82,17 +90,17 @@ export async function extractFromMaps(url, onProgress) {
         await mainPage.close();
 
         // --- FASE 2: Workers Paralelos ---
-        const CONCURRENCY = 5; // Quantidade de abas rodando ao mesmo tempo (igual sua versão em Go)
+        const CONCURRENCY = 5;
         let completedCount = 0;
         let finalData = [];
         const queue = [...uniquePlaces];
 
         const workerFn = async () => {
             const page = await context.newPage();
-            // Desabilita apenas imagens e media para economizar banda, mas PRECISA baixar CSS para o Maps renderizar
+            // Bloqueia imagens/media para performance
             await page.route('**/*', (route) => {
                 const type = route.request().resourceType();
-                if (['image', 'media'].includes(type)) {
+                if (['image', 'media', 'font'].includes(type)) {
                     route.abort();
                 } else {
                     route.continue();
@@ -101,75 +109,76 @@ export async function extractFromMaps(url, onProgress) {
 
             while (queue.length > 0) {
                 const place = queue.shift();
-                try {
-                    // load garante que a SPA do mapa finalizou o boot
-                    await page.goto(place.url, { waitUntil: 'load', timeout: 30000 });
+                let phone = null;
+                let retries = 2; // Tentativas se a página falhar ao carregar
 
-                    // Esperamos um pouquinho pra garantir o DOM preenchido (ou no maximo 5s)
+                // Pequeno atraso aleatório para simular comportamento humano
+                await page.waitForTimeout(Math.floor(Math.random() * 1000) + 500);
+
+                while (retries >= 0) {
                     try {
-                        await page.waitForSelector('button[data-tooltip*="telefone"], button[data-item-id^="phone:"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]', { timeout: 5000 });
-                    } catch (e) {
-                        // Se não achar o seletor, segue o jogo e tenta o fallback
-                    }
+                        await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-                    const phone = await page.evaluate(() => {
-                        // Metodo 1: atributo data-item-id (mais certeiro)
-                        const phoneBtn = document.querySelector('button[data-item-id^="phone:tel:"]');
-                        if (phoneBtn) {
-                            return phoneBtn.getAttribute('data-item-id').replace('phone:tel:', '');
-                        }
+                        // Espera rápida por seletores de telefone
+                        try {
+                            await page.waitForSelector('button[data-tooltip*="telefone"], button[data-item-id^="phone:"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]', { timeout: 6000 });
+                        } catch (e) { }
 
-                        // Metodo 2: tooltip label
-                        const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]');
-                        if (tooltipBtn) {
-                            let label = tooltipBtn.getAttribute('aria-label') || '';
-                            if (label.includes(':')) label = label.split(':').pop().trim();
-                            label = label.replace(/Copiar|número|de|telefone|phone|number/gi, '').trim();
-
-                            // Valida se tem qtde razoável de números
-                            if (label.replace(/\D/g, '').length >= 8) return label;
-                        }
-
-                        // Metodo 3: fallbacks de divs com Regex
-                        // Remove CEPs e percorre as linhas de texto pra evitar puxar endereços
-                        const rawText = document.body.innerText.replace(/\d{5}-\d{3}/g, '');
-                        const lines = rawText.split('\n');
-
-                        for (let line of lines) {
-                            // Pula linhas que têm "cara" de endereço
-                            if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
-
-                            const match = line.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
-                            if (match) {
-                                const digits = match[0].replace(/\D/g, '');
-                                if (digits.length >= 8 && digits.length <= 15) return match[0];
+                        phone = await page.evaluate(() => {
+                            // Metodo 1: atributo data-item-id
+                            const phoneBtn = document.querySelector('button[data-item-id^="phone:tel:"]');
+                            if (phoneBtn) {
+                                return phoneBtn.getAttribute('data-item-id').replace('phone:tel:', '');
                             }
-                        }
 
-                        return null;
-                    });
+                            // Metodo 2: tooltip label
+                            const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]');
+                            if (tooltipBtn) {
+                                let label = tooltipBtn.getAttribute('aria-label') || '';
+                                if (label.includes(':')) label = label.split(':').pop().trim();
+                                label = label.replace(/Copiar|número|de|telefone|phone|number/gi, '').trim();
+                                if (label.replace(/\D/g, '').length >= 8) return label;
+                            }
 
-                    finalData.push({
-                        name: place.name,
-                        phone: phone || ''
-                    });
-                } catch (e) {
-                    console.error(`Erro no worker para ${place.name}: ${e.message}`);
-                } finally {
-                    completedCount++;
-                    onProgress(`Extraindo telefones... (${completedCount}/${uniquePlaces.length})`, completedCount);
+                            // Metodo 3: fallbacks de Regex
+                            const rawText = document.body.innerText.replace(/\d{5}-\d{3}/g, '');
+                            const lines = rawText.split('\n');
+
+                            for (let line of lines) {
+                                if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
+                                const match = line.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
+                                if (match) {
+                                    const digits = match[0].replace(/\D/g, '');
+                                    if (digits.length >= 8 && digits.length <= 15) return match[0];
+                                }
+                            }
+                            return null;
+                        });
+                        break; // Se chegou aqui, deu certo (mesmo se phone for null)
+                    } catch (e) {
+                        console.error(`Tentativa falhou para ${place.name}: ${e.message}`);
+                        retries--;
+                        if (retries >= 0) await page.waitForTimeout(2000);
+                    }
                 }
+
+                // IMPORTANTE: Adiciona SEMPRE à lista final, mesmo que phone seja null
+                finalData.push({
+                    name: place.name,
+                    phone: phone || ''
+                });
+
+                completedCount++;
+                onProgress(`Extraindo telefones... (${completedCount}/${uniquePlaces.length})`, completedCount);
             }
             await page.close();
         };
 
-        // Instancia os workers
         const workers = [];
         for (let i = 0; i < CONCURRENCY; i++) {
             workers.push(workerFn());
         }
 
-        // Aguarda os workers (concorrentes) finalizarem a fila
         await Promise.all(workers);
 
         onProgress(`Extração finalizada com sucesso!`, finalData.length);

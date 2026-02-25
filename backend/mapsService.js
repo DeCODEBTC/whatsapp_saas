@@ -2,7 +2,7 @@ import { chromium } from 'playwright';
 
 /**
  * Extrai contatos do Google Maps e envia progresso via callback.
- * 
+ *
  * @param {string} url - Link do Google Maps
  * @param {function} onProgress - Callback(status, count) para atualizar o frontend
  * @returns {Promise<Array>} - Array com os resultados { name, phone }
@@ -10,7 +10,7 @@ import { chromium } from 'playwright';
 export async function extractFromMaps(url, onProgress) {
     let browser;
     try {
-        onProgress('Iniciando navegador com múltiplos workers...', 0);
+        onProgress('Iniciando navegador...', 0);
         browser = await chromium.launch({
             headless: true,
             args: [
@@ -23,7 +23,6 @@ export async function extractFromMaps(url, onProgress) {
             ]
         });
 
-        // Context com User-Agent e Locale para parecer mais "humano"
         const context = await browser.newContext({
             userAgent: 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/121.0.0.0 Safari/537.36',
             locale: 'pt-BR',
@@ -43,40 +42,42 @@ export async function extractFromMaps(url, onProgress) {
             onProgress('Aviso: Não encontrei a lista de resultados. Verifique se o link está correto.', 0);
         }
 
+        // --- FASE 1: Scroll para capturar todos os cards ---
         let previousHeight = 0;
         let previousCount = 0;
-        let sameHeightCount = 0;
+        let sameCount = 0;
 
         onProgress('Rolando a página e capturando links de todos os locais...', 0);
 
         while (true) {
             const scrollStatus = await mainPage.evaluate((selector) => {
                 const feed = document.querySelector(selector);
-                if (feed) {
-                    feed.scrollBy(0, 3000);
-                    return { scrolled: true, height: feed.scrollHeight };
-                }
-                return { scrolled: false, height: 0 };
+                if (!feed) return { scrolled: false, height: 0 };
+                feed.scrollBy(0, 3000);
+                return { scrolled: true, height: feed.scrollHeight };
             }, feedSelector);
 
             if (!scrollStatus.scrolled) break;
 
+            // Aguarda o conteúdo carregar após o scroll
+            await mainPage.waitForTimeout(1500);
+
             const count = await mainPage.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
 
+            onProgress(`Rolando a página... (${count} locais visíveis)`, count);
+
+            // Para apenas se altura E contagem não mudaram por 5 iterações consecutivas
             if (scrollStatus.height === previousHeight && count === previousCount) {
-                sameHeightCount++;
-                if (sameHeightCount >= 3) break;
+                sameCount++;
+                if (sameCount >= 5) break;
             } else {
-                sameHeightCount = 0;
+                sameCount = 0;
             }
             previousHeight = scrollStatus.height;
             previousCount = count;
-            await mainPage.waitForTimeout(1200); // Reduzido de 2000ms
-
-            onProgress(`Rolando a página... (${count} locais visíveis)`, count);
         }
 
-        // Pega URL direta de todos os cards
+        // Coleta todos os cards visíveis
         const places = await mainPage.evaluate(() => {
             return Array.from(document.querySelectorAll('a.hfpxzc')).map(a => ({
                 name: a.getAttribute('aria-label') || 'Desconhecido',
@@ -94,23 +95,26 @@ export async function extractFromMaps(url, onProgress) {
             }
         }
 
-        onProgress(`${uniquePlaces.length} locais encontrados. Iniciando extração com 3 workers paralelos...`, uniquePlaces.length);
+        onProgress(`${uniquePlaces.length} locais encontrados. Iniciando extração com 2 workers paralelos...`, uniquePlaces.length);
 
-        // Fecha página principal pra economizar RAM
+        // Fecha página principal para economizar RAM antes dos workers
         await mainPage.close();
 
         // --- FASE 2: Workers Paralelos ---
-        const CONCURRENCY = 3; // Reduzido para economizar RAM no Railway
+        // 2 workers para evitar OOM no Railway (512MB RAM)
+        // 3 workers × páginas pesadas do Google Maps = crash garantido
+        const CONCURRENCY = 2;
         let completedCount = 0;
-        let finalData = [];
+        const finalData = [];
         const queue = [...uniquePlaces];
 
         const workerFn = async (workerId) => {
             const page = await context.newPage();
-            // Bloqueia imagens/media para performance
+
+            // Bloqueia recursos pesados: imagens, fontes, CSS e mídia
             await page.route('**/*', (route) => {
                 const type = route.request().resourceType();
-                if (['image', 'media', 'font'].includes(type)) {
+                if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
                     route.abort();
                 } else {
                     route.continue();
@@ -127,11 +131,13 @@ export async function extractFromMaps(url, onProgress) {
                     try {
                         await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-                        // Aguarda o JS renderizar os detalhes do lugar (botão de telefone)
-                        // Nota: não usar networkidle — Google Maps faz requests infinitos e derruba a RAM
+                        // Aguarda o botão de telefone renderizar (JS assíncrono do Maps)
                         try {
-                            await page.waitForSelector('button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]', { timeout: 5000 });
-                        } catch (e) { }
+                            await page.waitForSelector(
+                                'button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]',
+                                { timeout: 5000 }
+                            );
+                        } catch (e) { /* lugar sem telefone, segue */ }
 
                         phone = await page.evaluate(() => {
                             // Método 1: data-item-id com número de telefone (mais confiável)
@@ -166,7 +172,6 @@ export async function extractFromMaps(url, onProgress) {
                                 line = line.trim();
                                 if (!line || line.length > 60) continue;
                                 if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
-                                // Remove CEPs para não confundir com telefone
                                 const cleanLine = line.replace(/\d{5}-\d{3}/g, '');
                                 const match = cleanLine.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
                                 if (match) {
@@ -176,30 +181,38 @@ export async function extractFromMaps(url, onProgress) {
                             }
                             return null;
                         });
-                        break;
+
+                        break; // sucesso
                     } catch (e) {
-                        // Se o browser fechou inesperadamente, encerra o worker graciosamente
                         if (e.message && e.message.includes('has been closed')) {
-                            console.error(`[Worker ${workerId}] Browser/page fechado inesperadamente, encerrando worker.`);
+                            // Browser crashou (OOM): registra item atual e drena a fila
+                            // para garantir que o resultado final tenha TODOS os contatos
+                            console.error(`[Worker ${workerId}] Browser fechado. Registrando itens restantes sem telefone.`);
+                            finalData.push({ name: place.name, phone: '' });
+                            completedCount++;
+                            while (queue.length > 0) {
+                                const remaining = queue.shift();
+                                finalData.push({ name: remaining.name, phone: '' });
+                                completedCount++;
+                            }
+                            onProgress(`Extração parcial (browser reiniciou). (${completedCount}/${uniquePlaces.length})`, completedCount);
+                            await page.close().catch(() => {});
                             return;
                         }
                         console.error(`[Worker ${workerId}] Tentativa falhou para ${place.name}: ${e.message}`);
                         retries--;
-                        // Usa setTimeout puro — page.waitForTimeout falha se a página crashar
+                        // setTimeout puro — page.waitForTimeout falha se a página crashar
                         if (retries >= 0) await new Promise(r => setTimeout(r, 1000));
                     }
                 }
 
-                // IMPORTANTE: Adiciona SEMPRE à lista final, mesmo que phone seja null
-                finalData.push({
-                    name: place.name,
-                    phone: phone || ''
-                });
-
+                // Adiciona SEMPRE à lista final, mesmo sem telefone
+                finalData.push({ name: place.name, phone: phone || '' });
                 completedCount++;
                 onProgress(`Extraindo telefones... (${completedCount}/${uniquePlaces.length})`, completedCount);
             }
-            await page.close();
+
+            await page.close().catch(() => {});
         };
 
         const workers = [];
@@ -209,13 +222,13 @@ export async function extractFromMaps(url, onProgress) {
 
         await Promise.all(workers);
 
-        onProgress(`Extração finalizada com sucesso!`, finalData.length);
+        onProgress(`Extração finalizada! ${finalData.length} contatos coletados.`, finalData.length);
         return finalData;
 
     } catch (e) {
-        console.error("Maps Scraping error: ", e);
+        console.error('Maps Scraping error: ', e);
         throw e;
     } finally {
-        if (browser) await browser.close();
+        if (browser) await browser.close().catch(() => {});
     }
 }

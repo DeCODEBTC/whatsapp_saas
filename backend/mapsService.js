@@ -127,14 +127,10 @@ export async function extractFromMaps(url, onProgress) {
                     try {
                         await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-                        // Aguarda o JS do Google Maps terminar de renderizar os detalhes
+                        // Aguarda o JS renderizar os detalhes do lugar (botão de telefone)
+                        // Nota: não usar networkidle — Google Maps faz requests infinitos e derruba a RAM
                         try {
-                            await page.waitForLoadState('networkidle', { timeout: 4000 });
-                        } catch (e) { /* ok se timeout */ }
-
-                        // Tenta esperar pelo botão de telefone especificamente
-                        try {
-                            await page.waitForSelector('button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]', { timeout: 3000 });
+                            await page.waitForSelector('button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]', { timeout: 5000 });
                         } catch (e) { }
 
                         phone = await page.evaluate(() => {
@@ -182,9 +178,15 @@ export async function extractFromMaps(url, onProgress) {
                         });
                         break;
                     } catch (e) {
+                        // Se o browser fechou inesperadamente, encerra o worker graciosamente
+                        if (e.message && e.message.includes('has been closed')) {
+                            console.error(`[Worker ${workerId}] Browser/page fechado inesperadamente, encerrando worker.`);
+                            return;
+                        }
                         console.error(`[Worker ${workerId}] Tentativa falhou para ${place.name}: ${e.message}`);
                         retries--;
-                        if (retries >= 0) await page.waitForTimeout(1000);
+                        // Usa setTimeout puro — page.waitForTimeout falha se a página crashar
+                        if (retries >= 0) await new Promise(r => setTimeout(r, 1000));
                     }
                 }
 

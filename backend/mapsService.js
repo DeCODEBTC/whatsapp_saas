@@ -111,10 +111,11 @@ export async function extractFromMaps(url, onProgress) {
         const workerFn = async (workerId) => {
             const page = await context.newPage();
 
-            // Bloqueia recursos pesados: imagens, fontes, CSS e mídia
+            // Bloqueia recursos pesados: imagens, fontes e mídia
+            // NÃO bloquear stylesheet — o Maps usa CSS para disparar lazy-loading de elementos
             await page.route('**/*', (route) => {
                 const type = route.request().resourceType();
-                if (['image', 'media', 'font', 'stylesheet'].includes(type)) {
+                if (['image', 'media', 'font'].includes(type)) {
                     route.abort();
                 } else {
                     route.continue();
@@ -131,16 +132,23 @@ export async function extractFromMaps(url, onProgress) {
                     try {
                         await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-                        // Aguarda o botão de telefone renderizar (JS assíncrono do Maps)
+                        // Aguarda o telefone renderizar — prioriza o link tel: que é o mais confiável
                         try {
                             await page.waitForSelector(
-                                'button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]',
-                                { timeout: 5000 }
+                                'a[href^="tel:"], button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]',
+                                { timeout: 7000 }
                             );
                         } catch (e) { /* lugar sem telefone, segue */ }
 
                         phone = await page.evaluate(() => {
-                            // Método 1: data-item-id com número de telefone (mais confiável)
+                            // Método 0: link tel: direto — o mais confiável e semântico
+                            // O Google Maps sempre renderiza <a href="tel:+55..."> quando tem telefone
+                            const telLink = document.querySelector('a[href^="tel:"]');
+                            if (telLink) {
+                                return telLink.getAttribute('href').replace('tel:', '').trim();
+                            }
+
+                            // Método 1: data-item-id com número de telefone
                             const phoneBtn = document.querySelector('button[data-item-id*="phone:tel:"]');
                             if (phoneBtn) {
                                 return phoneBtn.getAttribute('data-item-id').replace(/.*phone:tel:/, '').trim();
@@ -166,7 +174,7 @@ export async function extractFromMaps(url, onProgress) {
                                 }
                             }
 
-                            // Método 4: Regex no corpo da página (fallback)
+                            // Método 4: Regex no corpo da página (fallback final)
                             const lines = document.body.innerText.split('\n');
                             for (let line of lines) {
                                 line = line.trim();

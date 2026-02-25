@@ -44,6 +44,7 @@ export async function extractFromMaps(url, onProgress) {
         }
 
         let previousHeight = 0;
+        let previousCount = 0;
         let sameHeightCount = 0;
 
         onProgress('Rolando a página e capturando links de todos os locais...', 0);
@@ -60,16 +61,18 @@ export async function extractFromMaps(url, onProgress) {
 
             if (!scrollStatus.scrolled) break;
 
-            if (scrollStatus.height === previousHeight) {
+            const count = await mainPage.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
+
+            if (scrollStatus.height === previousHeight && count === previousCount) {
                 sameHeightCount++;
                 if (sameHeightCount >= 3) break;
             } else {
                 sameHeightCount = 0;
             }
             previousHeight = scrollStatus.height;
-            await mainPage.waitForTimeout(2000); // Pausa um pouco maior para carregar conteúdo
+            previousCount = count;
+            await mainPage.waitForTimeout(1200); // Reduzido de 2000ms
 
-            const count = await mainPage.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
             onProgress(`Rolando a página... (${count} locais visíveis)`, count);
         }
 
@@ -118,29 +121,31 @@ export async function extractFromMaps(url, onProgress) {
                 const place = queue.shift();
                 console.log(`[Worker ${workerId}] Extraindo: ${place.name}`);
                 let phone = null;
-                let retries = 2; // Tentativas se a página falhar ao carregar
-
-                // Pequeno atraso aleatório para simular comportamento humano
-                await page.waitForTimeout(Math.floor(Math.random() * 1000) + 500);
+                let retries = 2;
 
                 while (retries >= 0) {
                     try {
                         await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-                        // Espera rápida por seletores de telefone
+                        // Aguarda o JS do Google Maps terminar de renderizar os detalhes
                         try {
-                            await page.waitForSelector('button[data-tooltip*="telefone"], button[data-item-id^="phone:"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]', { timeout: 6000 });
+                            await page.waitForLoadState('networkidle', { timeout: 4000 });
+                        } catch (e) { /* ok se timeout */ }
+
+                        // Tenta esperar pelo botão de telefone especificamente
+                        try {
+                            await page.waitForSelector('button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]', { timeout: 3000 });
                         } catch (e) { }
 
                         phone = await page.evaluate(() => {
-                            // Metodo 1: atributo data-item-id
-                            const phoneBtn = document.querySelector('button[data-item-id^="phone:tel:"]');
+                            // Método 1: data-item-id com número de telefone (mais confiável)
+                            const phoneBtn = document.querySelector('button[data-item-id*="phone:tel:"]');
                             if (phoneBtn) {
-                                return phoneBtn.getAttribute('data-item-id').replace('phone:tel:', '');
+                                return phoneBtn.getAttribute('data-item-id').replace(/.*phone:tel:/, '').trim();
                             }
 
-                            // Metodo 2: tooltip label
-                            const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"], button[data-tooltip*="Copiar"]');
+                            // Método 2: aria-label de botão de telefone/tooltip
+                            const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"]');
                             if (tooltipBtn) {
                                 let label = tooltipBtn.getAttribute('aria-label') || '';
                                 if (label.includes(':')) label = label.split(':').pop().trim();
@@ -148,13 +153,26 @@ export async function extractFromMaps(url, onProgress) {
                                 if (label.replace(/\D/g, '').length >= 8) return label;
                             }
 
-                            // Metodo 3: fallbacks de Regex
-                            const rawText = document.body.innerText.replace(/\d{5}-\d{3}/g, '');
-                            const lines = rawText.split('\n');
+                            // Método 3: qualquer elemento com data-item-id contendo "phone"
+                            const phoneEl = document.querySelector('[data-item-id*="phone"]');
+                            if (phoneEl) {
+                                const text = (phoneEl.getAttribute('aria-label') || phoneEl.innerText || '').trim();
+                                const match = text.match(/[\+\d][\d\s\-\(\)]{7,19}/);
+                                if (match) {
+                                    const digits = match[0].replace(/\D/g, '');
+                                    if (digits.length >= 8 && digits.length <= 15) return match[0].trim();
+                                }
+                            }
 
+                            // Método 4: Regex no corpo da página (fallback)
+                            const lines = document.body.innerText.split('\n');
                             for (let line of lines) {
+                                line = line.trim();
+                                if (!line || line.length > 60) continue;
                                 if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
-                                const match = line.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
+                                // Remove CEPs para não confundir com telefone
+                                const cleanLine = line.replace(/\d{5}-\d{3}/g, '');
+                                const match = cleanLine.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
                                 if (match) {
                                     const digits = match[0].replace(/\D/g, '');
                                     if (digits.length >= 8 && digits.length <= 15) return match[0];
@@ -162,11 +180,11 @@ export async function extractFromMaps(url, onProgress) {
                             }
                             return null;
                         });
-                        break; // Se chegou aqui, deu certo (mesmo se phone for null)
+                        break;
                     } catch (e) {
                         console.error(`[Worker ${workerId}] Tentativa falhou para ${place.name}: ${e.message}`);
                         retries--;
-                        if (retries >= 0) await page.waitForTimeout(2000);
+                        if (retries >= 0) await page.waitForTimeout(1000);
                     }
                 }
 

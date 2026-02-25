@@ -29,15 +29,27 @@ export async function extractFromMaps(url, onProgress) {
             viewport: { width: 1280, height: 720 }
         });
 
-        const mainPage = await context.newPage();
+        // UMA única página para tudo — sem workers paralelos
+        // Workers paralelos = múltiplas páginas pesadas do Maps na RAM → OOM → crash
+        const page = await context.newPage();
+
+        // Bloqueia recursos pesados para reduzir memória
+        await page.route('**/*', (route) => {
+            const type = route.request().resourceType();
+            if (['image', 'media', 'font'].includes(type)) {
+                route.abort();
+            } else {
+                route.continue();
+            }
+        });
 
         onProgress('Acessando o Google Maps...', 0);
-        await mainPage.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
+        await page.goto(url, { waitUntil: 'domcontentloaded', timeout: 60000 });
 
-        // Espera a barra lateral carregar
+        // Espera a barra lateral de resultados carregar
         const feedSelector = '.m6QErb[aria-label]';
         try {
-            await mainPage.waitForSelector(feedSelector, { timeout: 20000 });
+            await page.waitForSelector(feedSelector, { timeout: 20000 });
         } catch (e) {
             onProgress('Aviso: Não encontrei a lista de resultados. Verifique se o link está correto.', 0);
         }
@@ -47,10 +59,10 @@ export async function extractFromMaps(url, onProgress) {
         let previousCount = 0;
         let sameCount = 0;
 
-        onProgress('Rolando a página e capturando links de todos os locais...', 0);
+        onProgress('Rolando a página e capturando todos os locais...', 0);
 
         while (true) {
-            const scrollStatus = await mainPage.evaluate((selector) => {
+            const scrollStatus = await page.evaluate((selector) => {
                 const feed = document.querySelector(selector);
                 if (!feed) return { scrolled: false, height: 0 };
                 feed.scrollBy(0, 3000);
@@ -59,14 +71,11 @@ export async function extractFromMaps(url, onProgress) {
 
             if (!scrollStatus.scrolled) break;
 
-            // Aguarda o conteúdo carregar após o scroll
-            await mainPage.waitForTimeout(1500);
+            await page.waitForTimeout(1500);
 
-            const count = await mainPage.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
-
+            const count = await page.evaluate(() => document.querySelectorAll('a.hfpxzc').length);
             onProgress(`Rolando a página... (${count} locais visíveis)`, count);
 
-            // Para apenas se altura E contagem não mudaram por 5 iterações consecutivas
             if (scrollStatus.height === previousHeight && count === previousCount) {
                 sameCount++;
                 if (sameCount >= 5) break;
@@ -77,15 +86,15 @@ export async function extractFromMaps(url, onProgress) {
             previousCount = count;
         }
 
-        // Coleta todos os cards visíveis
-        const places = await mainPage.evaluate(() => {
-            return Array.from(document.querySelectorAll('a.hfpxzc')).map(a => ({
+        // Coleta todos os cards (nome + URL)
+        const places = await page.evaluate(() =>
+            Array.from(document.querySelectorAll('a.hfpxzc')).map(a => ({
                 name: a.getAttribute('aria-label') || 'Desconhecido',
                 url: a.href
-            }));
-        });
+            }))
+        );
 
-        // Remove duplicatas de URL
+        // Remove duplicatas
         const uniquePlaces = [];
         const seenUrls = new Set();
         for (const p of places) {
@@ -95,140 +104,83 @@ export async function extractFromMaps(url, onProgress) {
             }
         }
 
-        onProgress(`${uniquePlaces.length} locais encontrados. Iniciando extração com 2 workers paralelos...`, uniquePlaces.length);
+        onProgress(`${uniquePlaces.length} locais encontrados. Extraindo nome e telefone...`, uniquePlaces.length);
 
-        // Fecha página principal para economizar RAM antes dos workers
-        await mainPage.close();
-
-        // --- FASE 2: Workers Paralelos ---
-        // 2 workers para evitar OOM no Railway (512MB RAM)
-        // 3 workers × páginas pesadas do Google Maps = crash garantido
-        const CONCURRENCY = 2;
-        let completedCount = 0;
+        // --- FASE 2: Visita cada lugar na mesma página (sequencial, baixo consumo de RAM) ---
         const finalData = [];
-        const queue = [...uniquePlaces];
 
-        const workerFn = async (workerId) => {
-            const page = await context.newPage();
+        for (let i = 0; i < uniquePlaces.length; i++) {
+            const place = uniquePlaces[i];
+            let phone = null;
 
-            // Bloqueia recursos pesados: imagens, fontes e mídia
-            // NÃO bloquear stylesheet — o Maps usa CSS para disparar lazy-loading de elementos
-            await page.route('**/*', (route) => {
-                const type = route.request().resourceType();
-                if (['image', 'media', 'font'].includes(type)) {
-                    route.abort();
-                } else {
-                    route.continue();
-                }
-            });
+            try {
+                await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
 
-            while (queue.length > 0) {
-                const place = queue.shift();
-                console.log(`[Worker ${workerId}] Extraindo: ${place.name}`);
-                let phone = null;
-                let retries = 2;
+                // Aguarda o telefone aparecer no DOM (JS assíncrono do Maps)
+                try {
+                    await page.waitForSelector(
+                        'a[href^="tel:"], button[data-item-id*="phone:tel:"]',
+                        { timeout: 5000 }
+                    );
+                } catch (e) { /* lugar sem telefone, ok */ }
 
-                while (retries >= 0) {
-                    try {
-                        await page.goto(place.url, { waitUntil: 'domcontentloaded', timeout: 30000 });
-
-                        // Aguarda o telefone renderizar — prioriza o link tel: que é o mais confiável
-                        try {
-                            await page.waitForSelector(
-                                'a[href^="tel:"], button[data-item-id*="phone:tel:"], button[data-tooltip*="telefone"], button[data-tooltip*="phone"]',
-                                { timeout: 7000 }
-                            );
-                        } catch (e) { /* lugar sem telefone, segue */ }
-
-                        phone = await page.evaluate(() => {
-                            // Método 0: link tel: direto — o mais confiável e semântico
-                            // O Google Maps sempre renderiza <a href="tel:+55..."> quando tem telefone
-                            const telLink = document.querySelector('a[href^="tel:"]');
-                            if (telLink) {
-                                return telLink.getAttribute('href').replace('tel:', '').trim();
-                            }
-
-                            // Método 1: data-item-id com número de telefone
-                            const phoneBtn = document.querySelector('button[data-item-id*="phone:tel:"]');
-                            if (phoneBtn) {
-                                return phoneBtn.getAttribute('data-item-id').replace(/.*phone:tel:/, '').trim();
-                            }
-
-                            // Método 2: aria-label de botão de telefone/tooltip
-                            const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"]');
-                            if (tooltipBtn) {
-                                let label = tooltipBtn.getAttribute('aria-label') || '';
-                                if (label.includes(':')) label = label.split(':').pop().trim();
-                                label = label.replace(/Copiar|número|de|telefone|phone|number/gi, '').trim();
-                                if (label.replace(/\D/g, '').length >= 8) return label;
-                            }
-
-                            // Método 3: qualquer elemento com data-item-id contendo "phone"
-                            const phoneEl = document.querySelector('[data-item-id*="phone"]');
-                            if (phoneEl) {
-                                const text = (phoneEl.getAttribute('aria-label') || phoneEl.innerText || '').trim();
-                                const match = text.match(/[\+\d][\d\s\-\(\)]{7,19}/);
-                                if (match) {
-                                    const digits = match[0].replace(/\D/g, '');
-                                    if (digits.length >= 8 && digits.length <= 15) return match[0].trim();
-                                }
-                            }
-
-                            // Método 4: Regex no corpo da página (fallback final)
-                            const lines = document.body.innerText.split('\n');
-                            for (let line of lines) {
-                                line = line.trim();
-                                if (!line || line.length > 60) continue;
-                                if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
-                                const cleanLine = line.replace(/\d{5}-\d{3}/g, '');
-                                const match = cleanLine.match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
-                                if (match) {
-                                    const digits = match[0].replace(/\D/g, '');
-                                    if (digits.length >= 8 && digits.length <= 15) return match[0];
-                                }
-                            }
-                            return null;
-                        });
-
-                        break; // sucesso
-                    } catch (e) {
-                        if (e.message && e.message.includes('has been closed')) {
-                            // Browser crashou (OOM): registra item atual e drena a fila
-                            // para garantir que o resultado final tenha TODOS os contatos
-                            console.error(`[Worker ${workerId}] Browser fechado. Registrando itens restantes sem telefone.`);
-                            finalData.push({ name: place.name, phone: '' });
-                            completedCount++;
-                            while (queue.length > 0) {
-                                const remaining = queue.shift();
-                                finalData.push({ name: remaining.name, phone: '' });
-                                completedCount++;
-                            }
-                            onProgress(`Extração parcial (browser reiniciou). (${completedCount}/${uniquePlaces.length})`, completedCount);
-                            await page.close().catch(() => {});
-                            return;
-                        }
-                        console.error(`[Worker ${workerId}] Tentativa falhou para ${place.name}: ${e.message}`);
-                        retries--;
-                        // setTimeout puro — page.waitForTimeout falha se a página crashar
-                        if (retries >= 0) await new Promise(r => setTimeout(r, 1000));
+                phone = await page.evaluate(() => {
+                    // Método 0: <a href="tel:..."> — o mais confiável e semântico
+                    const telLink = document.querySelector('a[href^="tel:"]');
+                    if (telLink) {
+                        return telLink.getAttribute('href').replace('tel:', '').trim();
                     }
-                }
 
-                // Adiciona SEMPRE à lista final, mesmo sem telefone
-                finalData.push({ name: place.name, phone: phone || '' });
-                completedCount++;
-                onProgress(`Extraindo telefones... (${completedCount}/${uniquePlaces.length})`, completedCount);
+                    // Método 1: data-item-id no botão do Maps
+                    const phoneBtn = document.querySelector('button[data-item-id*="phone:tel:"]');
+                    if (phoneBtn) {
+                        return phoneBtn.getAttribute('data-item-id').replace(/.*phone:tel:/, '').trim();
+                    }
+
+                    // Método 2: aria-label de botão de telefone
+                    const tooltipBtn = document.querySelector('button[data-tooltip*="telefone"], button[data-tooltip*="phone"]');
+                    if (tooltipBtn) {
+                        let label = tooltipBtn.getAttribute('aria-label') || '';
+                        if (label.includes(':')) label = label.split(':').pop().trim();
+                        label = label.replace(/Copiar|número|de|telefone|phone|number/gi, '').trim();
+                        if (label.replace(/\D/g, '').length >= 8) return label;
+                    }
+
+                    // Método 3: qualquer elemento com data-item-id contendo "phone"
+                    const phoneEl = document.querySelector('[data-item-id*="phone"]');
+                    if (phoneEl) {
+                        const text = (phoneEl.getAttribute('aria-label') || phoneEl.innerText || '').trim();
+                        const match = text.match(/[\+\d][\d\s\-\(\)]{7,19}/);
+                        if (match && match[0].replace(/\D/g, '').length >= 8) return match[0].trim();
+                    }
+
+                    // Método 4: Regex no corpo da página (fallback final)
+                    for (let line of document.body.innerText.split('\n')) {
+                        line = line.trim();
+                        if (!line || line.length > 60) continue;
+                        if (line.match(/(Rua|Av\.|Avenida|Praça|Rodovia|Bairro|CEP|Estado|Cidade|Logradouro)/i)) continue;
+                        const match = line.replace(/\d{5}-\d{3}/g, '')
+                            .match(/(?:\+?55\s?)?(?:\(?0?[1-9]{2}\)?\s?)?(?:9\d{4}|\d{4})[-.\s]?\d{4}/);
+                        if (match && match[0].replace(/\D/g, '').length >= 8) return match[0];
+                    }
+                    return null;
+                });
+
+            } catch (e) {
+                if (e.message && e.message.includes('has been closed')) {
+                    // Browser fechou (OOM): registra todos os restantes com telefone vazio
+                    for (let j = i; j < uniquePlaces.length; j++) {
+                        finalData.push({ name: uniquePlaces[j].name, phone: '' });
+                    }
+                    onProgress(`Extração parcial: ${finalData.length} contatos registrados.`, finalData.length);
+                    return finalData;
+                }
+                console.error(`Falha para ${place.name}: ${e.message}`);
             }
 
-            await page.close().catch(() => {});
-        };
-
-        const workers = [];
-        for (let i = 0; i < CONCURRENCY; i++) {
-            workers.push(workerFn(i + 1));
+            finalData.push({ name: place.name, phone: phone || '' });
+            onProgress(`Extraindo nome e telefone... (${i + 1}/${uniquePlaces.length})`, i + 1);
         }
-
-        await Promise.all(workers);
 
         onProgress(`Extração finalizada! ${finalData.length} contatos coletados.`, finalData.length);
         return finalData;
